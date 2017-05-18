@@ -17,7 +17,7 @@ int buttonInterval = 300;
 int buzzerInterval = 200;
 unsigned long prev_millis = 0;
 int timerInterval = 10;
-
+int pinc = 0;
 unsigned long current_millis = 0;
 int seconds = 0;
 int centisecond = 0;
@@ -59,9 +59,10 @@ void quiz()
   {
     PORTD = B11111100;
         
-    if(PINC == 1 || PINC == 2 || PINC == 8 || PINC == 16)
+    pinc = PINC;
+    if(pinc == 1 || pinc == 2 || pinc == 8 || pinc == 16)
     {
-      winner(PINC);
+      winner(pinc);
     }
   }
   if(digitalRead(8) == 1 || digitalRead(9) == 1)
@@ -112,9 +113,11 @@ void horn()
     return;
   }
   
-  while(digitalRead(8) == 1 || PINC != 0)
+  pinc = PINC;
+  while(digitalRead(8) == 1 || pinc != 0)
   {
-    switch(PINC)
+    pinc = PINC;
+    switch(pinc)
     {
       case 1:
         PORTD = B11101000;
