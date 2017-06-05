@@ -8,7 +8,7 @@ SevenSegmentExtended    display(PIN_CLK, PIN_DIO);
 
 int quizWinner = -1;
 int modesIndex = 0; //quiz
-String modes[] = {"QUIZ", "DISC", "HORN", "30 S", };
+String modes[] = { "QUIZ", "DISC", "HORN",  "30 S", };
 int maxModes = 3;
 double timerInitValue = 30;
 double timerCounter = timerInitValue;
@@ -21,6 +21,8 @@ int pinc = 0;
 unsigned long current_millis = 0;
 int seconds = 0;
 int centisecond = 0;
+const int RED_BUTTON_PIN = 8;
+const int GREEN_BUTTON_PIN = 9; 
 
 void setup()
 {
@@ -29,6 +31,9 @@ void setup()
   pinMode(A2, OUTPUT);
   pinMode(A3, INPUT);
   pinMode(A4, INPUT);
+  pinMode(A5, OUTPUT);
+  pinMode(A6, OUTPUT);
+  pinMode(A7, OUTPUT);
   pinMode(8, INPUT);
   pinMode(9, INPUT);
   
@@ -65,7 +70,7 @@ void quiz()
       winner(pinc);
     }
   }
-  if(digitalRead(8) == 1 || digitalRead(9) == 1)
+  if(digitalRead(RED_BUTTON_PIN) == 1 || digitalRead(GREEN_BUTTON_PIN) == 1)
   {
     quizWinner = -1;
     PORTD = B11111100;
@@ -114,9 +119,8 @@ void horn()
   }
   
   pinc = PINC;
-  while(digitalRead(8) == 1 || pinc != 0)
+  while(digitalRead(RED_BUTTON_PIN) == 1 || pinc != 0)
   {
-    pinc = PINC;
     switch(pinc)
     {
       case 1:
@@ -135,6 +139,7 @@ void horn()
         PORTD = B00001000;
         break;
     } 
+    pinc = PINC;
   }
   
   PORTD = B11111100;
@@ -142,7 +147,6 @@ void horn()
 
 void thirtySeconds()
 {
-  
   if(modes[modesIndex] != "30 S")
   {
     return;
@@ -150,7 +154,8 @@ void thirtySeconds()
 
   while(true)
   {
-    if(PINC != 0)
+    pinc = PINC;
+    if(pinc != 0)
     {
       PORTD = B11111100;
       runTimer = !runTimer;
@@ -166,11 +171,13 @@ void thirtySeconds()
         thirtysecondsCountDown();
       }
     }
-    if(digitalRead(8) == 1)
+    
+    if(digitalRead(RED_BUTTON_PIN) == 1)
     {
       resetTimer();
     }
-    if(digitalRead(9) == 1)
+
+    if(digitalRead(GREEN_BUTTON_PIN) == 1)
     {
       resetTimer();
       break;
@@ -207,15 +214,14 @@ void thirtySecondsFinished()
   PORTD = PORTD ^ B00000100;
   delay(buzzerInterval);
   PORTD = PORTD ^ B00000100;
-  
 }
 
 void cycleModes()
 {
-  if(digitalRead(9) == 1)
+  if(digitalRead(GREEN_BUTTON_PIN) == 1)
   {
     delay(10);
-    if(digitalRead(9) != 1)
+    if(digitalRead(GREEN_BUTTON_PIN) != 1)
     {
       return;
     }
