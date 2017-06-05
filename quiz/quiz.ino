@@ -22,7 +22,7 @@ unsigned long currentMillis = 0;
 int seconds = 0;
 int centisecond = 0;
 const int RED_BUTTON_PIN = 8;
-const int GREEN_BUTTON_PIN = 9; 
+const int GREEN_BUTTON_PIN = 9;
 
 const bool DEBUG = true;
 
@@ -73,10 +73,10 @@ void setup()
   pinMode(A7, OUTPUT);
   pinMode(8, INPUT);
   pinMode(9, INPUT);
-  
+
   DDRD = B11111111;
   PORTD = B11111100;
-   
+
   initPrint();
   print(modes[modesIndex]);
 }
@@ -111,7 +111,7 @@ int randomLight = -1;
 int previousRandomLight = -1;
 int i = 0;
 int level = 0;
-unsigned long randomSeedValue; 
+unsigned long randomSeedValue;
 
 int getRandomLight() {
   return lights[random(0, 4)];
@@ -128,7 +128,7 @@ void resetCopyGame() {
 void breakableDelay(int delay) {
   while (!(digitalRead(RED_BUTTON_PIN) == 1 || digitalRead(GREEN_BUTTON_PIN) == 1)) {
     currentMillis = millis();
-    if(currentMillis - prevMillis >= delay)
+    if (currentMillis - prevMillis >= delay)
     {
       prevMillis = currentMillis;
       break;
@@ -147,22 +147,22 @@ void playSequence() {
     print((String)sequence[i]);
     print((String)sequenceDelay);
 
-    switch(sequence[i])
+    switch (sequence[i])
     {
       case 1:
         PORTD = B11101100;
-      break;
+        break;
       case 2:
         PORTD = B11011100;
-      break;
+        break;
       case 8:
         PORTD = B10111100;
-      break;
+        break;
       case 16:
         PORTD = B01111100;
-      break;
+        break;
     }
-  
+
     breakableDelay(sequenceDelay);
   }
 
@@ -194,7 +194,7 @@ void checkUserSequence() {
         PORTD = B11111000;
         delay(buzzerInterval);
         PORTD = B11111100;
-        
+
         resetCopyGame();
       } else {
         i++;
@@ -205,7 +205,7 @@ void checkUserSequence() {
   if (!sequenceError) {
     levelCopyUp();
   }
-  
+
   repeat = false;
 }
 
@@ -216,7 +216,7 @@ void levelCopyUp() {
       sequenceLength++;
     }
   }
-  
+
   // check if sequenceDelay is not below 0
   if (sequenceDelay > MIN_DELAY + SEQUENCE_STEP) {
     sequenceDelay -= SEQUENCE_STEP;
@@ -246,25 +246,25 @@ void generateSequence() {
 }
 
 byte getRelatedLight(int pin) {
-  switch(pin)
+  switch (pin)
   {
     case 1:
       return B11101100;
-    break;
+      break;
     case 2:
       return B11011100;
-    break;
+      break;
     case 8:
       return B10111100;
-    break;
+      break;
     case 16:
       return B01111100;
-    break;
-  } 
+      break;
+  }
 }
 
 void copy() {
-  if(modes[modesIndex] != "COPY")
+  if (modes[modesIndex] != "COPY")
   {
     return;
   }
@@ -284,26 +284,28 @@ void copy() {
 
 void quiz()
 {
-  if(modes[modesIndex] != "QUIZ")
+  if (modes[modesIndex] != "QUIZ")
   {
     return;
   }
-  if(quizWinner == -1)
+
+  if (quizWinner == -1)
   {
     PORTD = B11111100;
-        
+
     pinc = PINC;
-    if(pinc == 1 || pinc == 2 || pinc == 8 || pinc == 16)
+    if (pinc == 1 || pinc == 2 || pinc == 8 || pinc == 16)
     {
       winner(pinc);
     }
   }
-  if(digitalRead(RED_BUTTON_PIN) == 1 || digitalRead(GREEN_BUTTON_PIN) == 1)
+
+  if (digitalRead(RED_BUTTON_PIN) == 1 || digitalRead(GREEN_BUTTON_PIN) == 1)
   {
     quizWinner = -1;
     PORTD = B11111100;
   }
-  
+
 }
 
 void winner(int winner)
@@ -318,7 +320,7 @@ void winner(int winner)
 
 void disco()
 {
-  if(modes[modesIndex] != "DISC")
+  if (modes[modesIndex] != "DISC")
   {
     return;
   }
@@ -327,15 +329,15 @@ void disco()
 
 void horn()
 {
-  if(modes[modesIndex] != "HORN")
+  if (modes[modesIndex] != "HORN")
   {
     return;
   }
-  
+
   pinc = PINC;
-  while(digitalRead(RED_BUTTON_PIN) == 1 || pinc != 0)
+  while (digitalRead(RED_BUTTON_PIN) == 1 || pinc != 0)
   {
-    switch(pinc)
+    switch (pinc)
     {
       case 1:
         PORTD = B11101000;
@@ -348,50 +350,50 @@ void horn()
         break;
       case 16:
         PORTD = B01111000;
-        break; 
+        break;
       case 0:
         PORTD = B00001000;
         break;
-    } 
+    }
     pinc = PINC;
   }
-  
+
   PORTD = B11111100;
 }
 
 void thirtySeconds()
 {
-  if(modes[modesIndex] != "30 S")
+  if (modes[modesIndex] != "30 S")
   {
     return;
   }
 
-  while(true)
+  while (true)
   {
     pinc = PINC;
-    if(pinc != 0)
+    if (pinc != 0)
     {
       PORTD = B11111100;
       runTimer = !runTimer;
       delay(buttonInterval);
     }
-    
-    if(runTimer)
+
+    if (runTimer)
     {
       currentMillis = millis();
-      if(currentMillis - prevMillis >= timerInterval)
+      if (currentMillis - prevMillis >= timerInterval)
       {
         prevMillis = currentMillis;
         thirtysecondsCountDown();
       }
     }
-    
-    if(digitalRead(RED_BUTTON_PIN) == 1)
+
+    if (digitalRead(RED_BUTTON_PIN) == 1)
     {
       resetTimer();
     }
 
-    if(digitalRead(GREEN_BUTTON_PIN) == 1)
+    if (digitalRead(GREEN_BUTTON_PIN) == 1)
     {
       resetTimer();
       break;
@@ -402,12 +404,12 @@ void thirtySeconds()
 void thirtysecondsCountDown()
 {
   seconds = (int)timerCounter;
-  centisecond = (timerCounter - seconds)*100;
-  
+  centisecond = (timerCounter - seconds) * 100;
+
   printTime(seconds, centisecond);
-  
+
   timerCounter = timerCounter - 0.01;
-  if(timerCounter < 0)
+  if (timerCounter < 0)
   {
     resetTimer();
     thirtySecondsFinished();
@@ -416,12 +418,12 @@ void thirtysecondsCountDown()
 
 void resetTimer()
 {
-    runTimer = false;
-    timerCounter = timerInitValue;
-    PORTD = B11111100;
-    
-    clearDisplay();
-    print("30 S");
+  runTimer = false;
+  timerCounter = timerInitValue;
+  PORTD = B11111100;
+
+  clearDisplay();
+  print("30 S");
 }
 
 void thirtySecondsFinished()
@@ -434,19 +436,19 @@ void thirtySecondsFinished()
 
 void cycleModes()
 {
-  if(digitalRead(GREEN_BUTTON_PIN) == 1)
+  if (digitalRead(GREEN_BUTTON_PIN) == 1)
   {
     delay(10);
-    if(digitalRead(GREEN_BUTTON_PIN) != 1)
+    if (digitalRead(GREEN_BUTTON_PIN) != 1)
     {
       return;
     }
     modesIndex++;
-    if(modesIndex > maxModes)
+    if (modesIndex > maxModes)
     {
       modesIndex = 0;
     }
-    //display.clear();
+
     clearDisplay();
     print(modes[modesIndex]);
     delay(buttonInterval);
