@@ -17,10 +17,12 @@ int buttonInterval = 300;
 int buzzerInterval = 200;
 unsigned long prev_millis = 0;
 int timerInterval = 10;
-
+int pinc = 0;
 unsigned long current_millis = 0;
 int seconds = 0;
 int centisecond = 0;
+const int RED_BUTTON_PIN = 8;
+const int GREEN_BUTTON_PIN = 9; 
 
 void setup()
 {
@@ -29,6 +31,9 @@ void setup()
   pinMode(A2, OUTPUT);
   pinMode(A3, INPUT);
   pinMode(A4, INPUT);
+  pinMode(A5, OUTPUT);
+  pinMode(A6, OUTPUT);
+  pinMode(A7, OUTPUT);
   pinMode(8, INPUT);
   pinMode(9, INPUT);
   
@@ -63,6 +68,7 @@ const int DEFAULT_SEQUENCE = 2;
 const int DEFAULT_SEQUENCE_DELAY = 1000;
 const int LEVEL_STEP = 2;
 const int RANDOM_BUTTON_COUNT = 3;
+const int USER_FEEDBACK_DELAY = 800;
 
 bool repeat = false;
 bool sequenceError = false;
@@ -74,12 +80,11 @@ int lights[4] = {1, 2, 8, 16};
 int randomLight = -1;
 int previousRandomLight = -1;
 int i = 0;
-int pinc = 0;
 int level = 0;
 unsigned long randomSeedValue; 
 
 int getRandomLight() {
-  return lights[random(0, 3)];
+  return lights[random(0, 4)];
 }
 
 void resetCopy() {
@@ -89,122 +94,144 @@ void resetCopy() {
   level = 0; 
 }
 
+void playSequence() {
+  // play the sequence
+  for (i = 0; i < sequenceLength; i++) {
+    // Serial.print("turning on light: ");
+    // Serial.println(sequence[i]);
+    switch(sequence[i])
+    {
+      case 1:
+        PORTD = B11101100;
+      break;
+      case 2:
+        PORTD = B11011100;
+      break;
+      case 8:
+        PORTD = B10111100;
+      break;
+      case 16:
+        PORTD = B01111100;
+      break;
+    }
+    delay(sequenceDelay);
+  }
+
+  // sequence has been built we can now go into play mode \o/
+  repeat = true;
+
+  PORTD = B11111100;
+}
+
+void checkUserSequence() {
+  // compare sequence against user input
+  i = 0;
+  while (sequenceError || i != sequenceLength) {
+    pinc = PINC;
+    delay(buttonInterval);
+    if (pinc != 0) {
+      PORTD = getRelatedLight(pinc);
+      delay(USER_FEEDBACK_DELAY);
+      PORTD = B11111100;
+      Serial.println(pinc);
+      // we got a button value here yay
+      if (pinc != sequence[i]) {
+        
+        Serial.println("Pressed button ");
+        Serial.println(pinc);
+
+        Serial.println("Right button ");
+        Serial.println(sequence[i]);
+
+        sequenceError = true;
+
+        PORTD = B11111000;
+        delay(buzzerInterval);
+        PORTD = B11111100;
+
+        resetCopy();
+      } else {
+        Serial.println("Length is: ");
+        Serial.println(sequenceLength);
+        
+        Serial.println("Current pos: ");
+        Serial.println(i);
+        i++;
+      }
+    }
+  }
+
+  Serial.println("wooohooo completed \o/");
+  repeat = false;
+}
+
+void levelCopyUp() {
+  // check if sequenceLength is within array bounds
+  if ((level % LEVEL_STEP) == 0) {
+    if (sequenceLength < MAX_SEQUENCE) {
+      sequenceLength++;
+    }
+  }
+  
+  // check if sequenceDelay is not below 0
+  if (sequenceDelay > MIN_DELAY + SEQUENCE_STEP) {
+    sequenceDelay -= SEQUENCE_STEP;
+  }
+
+  level++;
+}
+
+void generateSequence() {
+  randomSeed(millis());
+  // build light sequence
+  Serial.println("Generating random sequence");
+  for (i = 0; i < sequenceLength; i++) {
+    randomLight = getRandomLight();
+    if (previousRandomLight != -1) {
+      while (randomLight == previousRandomLight) {
+        randomLight = getRandomLight();
+      }
+    }
+
+    sequence[i] = randomLight;
+    previousRandomLight = randomLight;
+    Serial.println(randomLight);
+  }
+  Serial.println("Done generating random sequence");
+}
+
+byte getRelatedLight(int pin) {
+  switch(pin)
+  {
+    case 1:
+      return B11101100;
+    break;
+    case 2:
+      return B11011100;
+    break;
+    case 8:
+      return B10111100;
+    break;
+    case 16:
+      return B01111100;
+    break;
+  } 
+}
+
 void copy() {
   if(modes[modesIndex] != "COPY")
   {
     return;
   }
   
-  while (i < RANDOM_BUTTON_COUNT) {
-    pinc = PINC;
-    delay(buttonInterval);
-    if (pinc != 0) {
-      i++;
-    }
-  }
-
-  randomSeedValue = millis();
-
-  i = 0;
   if (!repeat) {
-    Serial.println("Seeding random with ");
-    Serial.println(randomSeedValue);
-    randomSeed(randomSeedValue);
-    // build light sequence
-    Serial.println("Generating random sequence");
-    for (i = 0; i < sequenceLength; i++) {
-      randomLight = getRandomLight();
-      if (previousRandomLight != -1) {
-        while (randomLight == previousRandomLight) {
-          randomLight = getRandomLight();
-        }
-      }
-
-      sequence[i] = randomLight;
-      previousRandomLight = randomLight;
-      Serial.println(randomLight);
-    }
-    Serial.println("Done generating random sequence");
-
-    // play the sequence
-    for (i = 0; i < sequenceLength; i++) {
-      // Serial.print("turning on light: ");
-      // Serial.println(sequence[i]);
-      switch(sequence[i])
-      {
-        case 1:
-          PORTD = B11101100;
-        break;
-        case 2:
-          PORTD = B11011100;
-        break;
-        case 8:
-          PORTD = B10111100;
-        break;
-        case 16:
-          PORTD = B01111100;
-        break;
-      }
-      delay(sequenceDelay);
-    }
-
-    // sequence has been built we can now go into play mode \o/
-    repeat = true;
-
-    PORTD = B11111100;
+    delay(1000);
+    generateSequence();
+    playSequence();
   } else {
-    // compare sequence against user input
-    i = 0;
-    while (sequenceError || i != sequenceLength) {
-      pinc = PINC;
-      delay(buttonInterval);
-      if (pinc != 0) {
-        Serial.println(pinc);
-        // we got a button value here yay
-        if (pinc != sequence[i]) {
-          
-          Serial.println("Pressed button ");
-          Serial.println(pinc);
-
-          Serial.println("Right button ");
-          Serial.println(sequence[i]);
-
-          sequenceError = true;
-
-          // PORTD = B11111000;
-          delay(buzzerInterval);
-          // PORTD = B11111100;
-
-          resetCopy();
-        } else {
-          Serial.println("Length is: ");
-          Serial.println(sequenceLength);
-          
-          Serial.println("Current pos: ");
-          Serial.println(i);
-          i++;
-        }
-      }
-    }
-
-    Serial.println("wooohooo completed \o/");
-    repeat = false;
-
-    // check if sequenceLength is within array bounds
-    if ((level % LEVEL_STEP) == 0) {
-      if (sequenceLength < MAX_SEQUENCE) {
-        sequenceLength++;
-      }
-    }
-    
-    // check if sequenceDelay is not below 0
-    if (sequenceDelay > MIN_DELAY + SEQUENCE_STEP) {
-      sequenceDelay -= SEQUENCE_STEP;
-    }
-
-    level++;
+    checkUserSequence();
+    levelCopyUp();
   }
-
 }
 
 void quiz()
@@ -217,12 +244,13 @@ void quiz()
   {
     PORTD = B11111100;
         
-    if(PINC == 1 || PINC == 2 || PINC == 8 || PINC == 16)
+    pinc = PINC;
+    if(pinc == 1 || pinc == 2 || pinc == 8 || pinc == 16)
     {
-      winner(PINC);
+      winner(pinc);
     }
   }
-  if(digitalRead(8) == 1 || digitalRead(9) == 1)
+  if(digitalRead(RED_BUTTON_PIN) == 1 || digitalRead(GREEN_BUTTON_PIN) == 1)
   {
     quizWinner = -1;
     PORTD = B11111100;
@@ -270,9 +298,10 @@ void horn()
     return;
   }
   
-  while(digitalRead(8) == 1 || PINC != 0)
+  pinc = PINC;
+  while(digitalRead(RED_BUTTON_PIN) == 1 || pinc != 0)
   {
-    switch(PINC)
+    switch(pinc)
     {
       case 1:
         PORTD = B11101000;
@@ -290,6 +319,7 @@ void horn()
         PORTD = B00001000;
         break;
     } 
+    pinc = PINC;
   }
   
   PORTD = B11111100;
@@ -297,7 +327,6 @@ void horn()
 
 void thirtySeconds()
 {
-  
   if(modes[modesIndex] != "30 S")
   {
     return;
@@ -305,7 +334,8 @@ void thirtySeconds()
 
   while(true)
   {
-    if(PINC != 0)
+    pinc = PINC;
+    if(pinc != 0)
     {
       PORTD = B11111100;
       runTimer = !runTimer;
@@ -321,11 +351,13 @@ void thirtySeconds()
         thirtysecondsCountDown();
       }
     }
-    if(digitalRead(8) == 1)
+    
+    if(digitalRead(RED_BUTTON_PIN) == 1)
     {
       resetTimer();
     }
-    if(digitalRead(9) == 1)
+
+    if(digitalRead(GREEN_BUTTON_PIN) == 1)
     {
       resetTimer();
       break;
@@ -362,15 +394,14 @@ void thirtySecondsFinished()
   PORTD = PORTD ^ B00000100;
   delay(buzzerInterval);
   PORTD = PORTD ^ B00000100;
-  
 }
 
 void cycleModes()
 {
-  if(digitalRead(9) == 1)
+  if(digitalRead(GREEN_BUTTON_PIN) == 1)
   {
     delay(10);
-    if(digitalRead(9) != 1)
+    if(digitalRead(GREEN_BUTTON_PIN) != 1)
     {
       return;
     }
