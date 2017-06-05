@@ -24,7 +24,7 @@ int centisecond = 0;
 const int RED_BUTTON_PIN = 8;
 const int GREEN_BUTTON_PIN = 9;
 
-const bool DEBUG = true;
+const bool DEBUG = false;
 
 // Printing methods
 void print(String input) {
@@ -103,6 +103,7 @@ const int USER_FEEDBACK_DELAY = 800;
 bool repeat = false;
 bool sequenceError = false;
 bool sequenceCompleted = true;
+int lastButtonPressed = -1;
 int sequenceLength = DEFAULT_SEQUENCE;
 int sequenceDelay = DEFAULT_SEQUENCE_DELAY;
 int sequence[MAX_SEQUENCE];
@@ -122,17 +123,38 @@ void resetCopyGame() {
   sequenceLength = DEFAULT_SEQUENCE;
   sequenceDelay = DEFAULT_SEQUENCE_DELAY;
   level = 0;
+  lastButtonPressed = -1;
   PORTD = B11111100;
+  
+  clearDisplay();
+  print(modes[modesIndex]);
 }
 
-void breakableDelay(int delay) {
+void breakableDelay(int delayTime) {
+  prevMillis = millis();
   while (!(digitalRead(RED_BUTTON_PIN) == 1 || digitalRead(GREEN_BUTTON_PIN) == 1)) {
     currentMillis = millis();
-    if (currentMillis - prevMillis >= delay)
+    if (currentMillis - prevMillis >= delayTime)
     {
-      prevMillis = currentMillis;
       break;
     }
+  }
+}
+
+String getLight(int light) {
+  switch (light) {
+    case 1:
+      return "YELLOW";
+      break;
+    case 2:
+      return "BLUE";
+      break;
+    case 8:
+      return "GREEN";
+      break;
+    case 16:
+      return "RED";
+      break;
   }
 }
 
@@ -143,9 +165,6 @@ void playSequence() {
       resetCopyGame();
       break;
     }
-
-    print((String)sequence[i]);
-    print((String)sequenceDelay);
 
     switch (sequence[i])
     {
@@ -163,7 +182,8 @@ void playSequence() {
         break;
     }
 
-    breakableDelay(sequenceDelay);
+    // breakableDelay(sequenceDelay);
+    delay(1000);
   }
 
   // sequence has been built we can now go into play mode \o/
@@ -182,11 +202,12 @@ void checkUserSequence() {
     }
 
     pinc = PINC;
-    delay(buttonInterval);
-    if (pinc != 0) {
+    if (pinc != lastButtonPressed && pinc != 0) {
+      lastButtonPressed = pinc;
       PORTD = getRelatedLight(pinc);
-      delay(USER_FEEDBACK_DELAY);
+      delay(buttonInterval);
       PORTD = B11111100;
+
       // we got a button value here yay
       if (pinc != sequence[i]) {
         sequenceError = true;
@@ -207,6 +228,7 @@ void checkUserSequence() {
   }
 
   repeat = false;
+  lastButtonPressed = -1;
 }
 
 void levelCopyUp() {
@@ -225,7 +247,7 @@ void levelCopyUp() {
   level++;
 
   clearDisplay();
-  print((String)level);
+  print("L" + (String)level);
 }
 
 void generateSequence() {
@@ -270,7 +292,7 @@ void copy() {
   }
 
   if (!repeat) {
-    breakableDelay(1000);
+    delay(1000);
     generateSequence();
     playSequence();
   } else {
