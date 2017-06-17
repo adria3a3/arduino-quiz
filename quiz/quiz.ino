@@ -8,8 +8,8 @@ SevenSegmentExtended    display(PIN_CLK, PIN_DIO);
 
 int quizWinner = -1;
 int modesIndex = 0; //quiz
-String modes[] = {"QUIZ", "DISC", "HORN", "30 S", "COPY", };
-int maxModes = 4;
+String modes[] = {"QUIZ", "DISC", "HORN", "30 S", };
+int maxModes = 3;
 double timerInitValue = 30;
 double timerCounter = timerInitValue;
 bool runTimer;
@@ -37,7 +37,7 @@ void print(String input) {
 
 void printTime(int seconds, int centisecond) {
   if (DEBUG) {
-    Serial.println(centisecond);
+    // Serial.println(centisecond);
   } else {
     display.printTime(seconds, centisecond, false);
   }
@@ -63,27 +63,33 @@ void clearDisplay() {
 
 void setup()
 {
-  pinMode(A0, INPUT);
-  pinMode(A1, INPUT);
-  pinMode(A2, OUTPUT);
-  pinMode(A3, INPUT);
-  pinMode(A4, INPUT);
-  pinMode(A5, OUTPUT);
-  pinMode(A6, OUTPUT);
-  pinMode(A7, OUTPUT);
-  pinMode(8, INPUT);
-  pinMode(9, INPUT);
-
-  DDRD = B11111111;
+  DDRC =  B11100100;
+  DDRD =  B11111111;
   PORTD = B11111100;
+  DDRB =  B11111100;
 
   initPrint();
   print(modes[modesIndex]);
 }
 
+unsigned long buttonPressedDuration = 0;
+bool buttonPressed(int pin) {
+  buttonPressedDuration = 0;
+  while (digitalRead(pin) == 1) {
+    if (buttonPressedDuration == 0) {
+      buttonPressedDuration = millis();
+    }
+  }
+
+  if (buttonPressedDuration != 0 && (buttonPressedDuration - millis()) > 10) {
+    return true;
+  }
+  return false;
+}
+
 void loop()
 {
-  copy();
+  // copy();
   quiz();
   disco();
   horn();
@@ -132,7 +138,7 @@ void resetCopyGame() {
 
 void breakableDelay(int delayTime) {
   prevMillis = millis();
-  while (!(digitalRead(RED_BUTTON_PIN) == 1 || digitalRead(GREEN_BUTTON_PIN) == 1)) {
+  while (!(buttonPressed(RED_BUTTON_PIN) || buttonPressed(GREEN_BUTTON_PIN))) {
     currentMillis = millis();
     if (currentMillis - prevMillis >= delayTime)
     {
@@ -161,7 +167,7 @@ String getLight(int light) {
 void playSequence() {
   // play the sequence
   for (i = 0; i < sequenceLength; i++) {
-    if (digitalRead(RED_BUTTON_PIN) == 1 || digitalRead(GREEN_BUTTON_PIN) == 1) {
+    if (buttonPressed(RED_BUTTON_PIN) || buttonPressed(GREEN_BUTTON_PIN)) {
       resetCopyGame();
       break;
     }
@@ -196,7 +202,7 @@ void checkUserSequence() {
   i = 0;
   sequenceError = false;
   while (!sequenceError && i != sequenceLength) {
-    if (digitalRead(RED_BUTTON_PIN) == 1 || digitalRead(GREEN_BUTTON_PIN) == 1) {
+    if (buttonPressed(RED_BUTTON_PIN) || buttonPressed(GREEN_BUTTON_PIN)) {
       resetCopyGame();
       break;
     }
@@ -299,9 +305,14 @@ void copy() {
     checkUserSequence();
   }
 
-  if (digitalRead(RED_BUTTON_PIN) == 1 || digitalRead(GREEN_BUTTON_PIN) == 1) {
+  if (buttonPressed(RED_BUTTON_PIN) || buttonPressed(GREEN_BUTTON_PIN)) {
     resetCopyGame();
   }
+}
+
+void resetQuiz() {
+  quizWinner = -1;
+  PORTD = B11111100;
 }
 
 void quiz()
@@ -322,10 +333,9 @@ void quiz()
     }
   }
 
-  if (digitalRead(RED_BUTTON_PIN) == 1 || digitalRead(GREEN_BUTTON_PIN) == 1)
+  if (buttonPressed(RED_BUTTON_PIN))
   {
-    quizWinner = -1;
-    PORTD = B11111100;
+    resetQuiz();
   }
 
 }
@@ -357,7 +367,7 @@ void horn()
   }
 
   pinc = PINC;
-  while (digitalRead(RED_BUTTON_PIN) == 1 || pinc != 0)
+  while (buttonPressed(RED_BUTTON_PIN) || pinc != 0)
   {
     switch (pinc)
     {
@@ -390,37 +400,29 @@ void thirtySeconds()
     return;
   }
 
-  while (true)
+  pinc = PINC;
+  if (pinc != 0)
   {
-    pinc = PINC;
-    if (pinc != 0)
-    {
-      PORTD = B11111100;
-      runTimer = !runTimer;
-      delay(buttonInterval);
-    }
+    PORTD = B11111100;
+    runTimer = true;
+    delay(buttonInterval);
+  }
 
-    if (runTimer)
+  if (runTimer)
+  {
+    currentMillis = millis();
+    if (currentMillis - prevMillis >= timerInterval)
     {
-      currentMillis = millis();
-      if (currentMillis - prevMillis >= timerInterval)
-      {
-        prevMillis = currentMillis;
-        thirtysecondsCountDown();
-      }
-    }
-
-    if (digitalRead(RED_BUTTON_PIN) == 1)
-    {
-      resetTimer();
-    }
-
-    if (digitalRead(GREEN_BUTTON_PIN) == 1)
-    {
-      resetTimer();
-      break;
+      prevMillis = currentMillis;
+      thirtysecondsCountDown();
     }
   }
+
+  if (buttonPressed(RED_BUTTON_PIN))
+  {
+    resetThirtySeconds();
+  }
+
 }
 
 void thirtysecondsCountDown()
@@ -433,13 +435,14 @@ void thirtysecondsCountDown()
   timerCounter = timerCounter - 0.01;
   if (timerCounter < 0)
   {
-    resetTimer();
+    resetThirtySeconds();
     thirtySecondsFinished();
   }
 }
 
-void resetTimer()
+void resetThirtySeconds()
 {
+  prevMillis = 0;
   runTimer = false;
   timerCounter = timerInitValue;
   PORTD = B11111100;
@@ -456,20 +459,23 @@ void thirtySecondsFinished()
   PORTD = PORTD ^ B00000100;
 }
 
+void resetGames() {
+  resetThirtySeconds();
+  resetQuiz();
+  // resetCopyGame();
+}
+
 void cycleModes()
 {
-  if (digitalRead(GREEN_BUTTON_PIN) == 1)
+  if (buttonPressed(GREEN_BUTTON_PIN))
   {
-    delay(10);
-    if (digitalRead(GREEN_BUTTON_PIN) != 1)
-    {
-      return;
-    }
     modesIndex++;
     if (modesIndex > maxModes)
     {
       modesIndex = 0;
     }
+    
+    resetGames();
 
     clearDisplay();
     print(modes[modesIndex]);
