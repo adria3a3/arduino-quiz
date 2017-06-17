@@ -8,8 +8,8 @@ SevenSegmentExtended    display(PIN_CLK, PIN_DIO);
 
 int quizWinner = -1;
 int modesIndex = 0; //quiz
-String modes[] = {"QUIZ", "DISC", "HORN", "30 S", };
-int maxModes = 3;
+String modes[] = {"QUIZ", "DISC", "HORN", "30 S", "COPY" };
+int maxModes = 4;
 double timerInitValue = 30;
 double timerCounter = timerInitValue;
 bool runTimer;
@@ -89,7 +89,7 @@ bool buttonPressed(int pin) {
 
 void loop()
 {
-  // copy();
+  copy();
   quiz();
   disco();
   horn();
@@ -296,17 +296,12 @@ void copy() {
   {
     return;
   }
-
   if (!repeat) {
     delay(1000);
     generateSequence();
     playSequence();
   } else {
     checkUserSequence();
-  }
-
-  if (buttonPressed(RED_BUTTON_PIN) || buttonPressed(GREEN_BUTTON_PIN)) {
-    resetCopyGame();
   }
 }
 
@@ -404,7 +399,7 @@ void thirtySeconds()
   if (pinc != 0)
   {
     PORTD = B11111100;
-    runTimer = true;
+    runTimer = !runTimer;
     delay(buttonInterval);
   }
 
@@ -422,7 +417,6 @@ void thirtySeconds()
   {
     resetThirtySeconds();
   }
-
 }
 
 void thirtysecondsCountDown()
@@ -462,7 +456,7 @@ void thirtySecondsFinished()
 void resetGames() {
   resetThirtySeconds();
   resetQuiz();
-  // resetCopyGame();
+  resetCopyGame();
 }
 
 void cycleModes()
