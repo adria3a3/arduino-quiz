@@ -99,7 +99,7 @@ void loop()
 
 const int MAX_SEQUENCE = 20;
 const int MIN_DELAY = 150;
-const int SEQUENCE_STEP = 50;
+const int SEQUENCE_STEP = 100;
 const int DEFAULT_SEQUENCE = 2;
 const int DEFAULT_SEQUENCE_DELAY = 1200;
 const int LEVEL_STEP = 2;
