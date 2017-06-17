@@ -98,10 +98,10 @@ void loop()
 }
 
 const int MAX_SEQUENCE = 20;
-const int MIN_DELAY = 1;
+const int MIN_DELAY = 150;
 const int SEQUENCE_STEP = 50;
 const int DEFAULT_SEQUENCE = 2;
-const int DEFAULT_SEQUENCE_DELAY = 1000;
+const int DEFAULT_SEQUENCE_DELAY = 1200;
 const int LEVEL_STEP = 2;
 const int RANDOM_BUTTON_COUNT = 3;
 const int USER_FEEDBACK_DELAY = 800;
@@ -125,13 +125,14 @@ int getRandomLight() {
 }
 
 void resetCopyGame() {
+  i = 0;
+  sequenceError = false;
   repeat = false;
   sequenceLength = DEFAULT_SEQUENCE;
   sequenceDelay = DEFAULT_SEQUENCE_DELAY;
   level = 0;
   lastButtonPressed = -1;
   PORTD = B11111100;
-  
   clearDisplay();
   print(modes[modesIndex]);
 }
@@ -164,34 +165,38 @@ String getLight(int light) {
   }
 }
 
-void playSequence() {
+void turnOnLight(int light) {
+  switch (light)
+  {
+    case 1:
+      PORTD = B11101100;
+      break;
+    case 2:
+      PORTD = B11011100;
+      break;
+    case 8:
+      PORTD = B10111100;
+      break;
+    case 16:
+      PORTD = B01111100;
+      break;
+  }
+}
+
+void playCopySequence() {
   // play the sequence
   for (i = 0; i < sequenceLength; i++) {
-    if (buttonPressed(RED_BUTTON_PIN) || buttonPressed(GREEN_BUTTON_PIN)) {
+    if (buttonPressed(RED_BUTTON_PIN)) {
       resetCopyGame();
       break;
     }
 
-    switch (sequence[i])
-    {
-      case 1:
-        PORTD = B11101100;
-        break;
-      case 2:
-        PORTD = B11011100;
-        break;
-      case 8:
-        PORTD = B10111100;
-        break;
-      case 16:
-        PORTD = B01111100;
-        break;
-    }
+    turnOnLight(sequence[i]);
 
-    // breakableDelay(sequenceDelay);
-    delay(1000);
+    delay(sequenceDelay);
   }
 
+  i = 0;
   // sequence has been built we can now go into play mode \o/
   repeat = true;
   PORTD = B11111100;
@@ -199,12 +204,10 @@ void playSequence() {
 
 void checkUserSequence() {
   // compare sequence against user input
-  i = 0;
-  sequenceError = false;
-  while (!sequenceError && i != sequenceLength) {
-    if (buttonPressed(RED_BUTTON_PIN) || buttonPressed(GREEN_BUTTON_PIN)) {
+  if (!sequenceError && i != sequenceLength) {
+    if (buttonPressed(RED_BUTTON_PIN)) {
       resetCopyGame();
-      break;
+      return;
     }
 
     pinc = PINC;
@@ -229,11 +232,12 @@ void checkUserSequence() {
     }
   }
 
-  if (!sequenceError) {
+  if (!sequenceError && i == sequenceLength) {
     levelCopyUp();
+    repeat = false;
   }
 
-  repeat = false;
+  // repeat = false;
   lastButtonPressed = -1;
 }
 
@@ -271,6 +275,8 @@ void generateSequence() {
     sequence[i] = randomLight;
     previousRandomLight = randomLight;
   }
+
+  i = 0;
 }
 
 byte getRelatedLight(int pin) {
@@ -291,17 +297,26 @@ byte getRelatedLight(int pin) {
   }
 }
 
+bool copyGameStarted = false;
 void copy() {
   if (modes[modesIndex] != "COPY")
   {
     return;
   }
-  if (!repeat) {
-    delay(1000);
-    generateSequence();
-    playSequence();
-  } else {
-    checkUserSequence();
+
+  pinc = PINC;
+  if (pinc != 0) {
+    copyGameStarted = true;
+  }
+
+  if (copyGameStarted) {
+    if (!repeat) {
+      delay(1000);
+      generateSequence();
+      playCopySequence();
+    } else {
+      checkUserSequence();
+    }
   }
 }
 
@@ -351,6 +366,7 @@ void disco()
   {
     return;
   }
+
   PORTD = B00001100;
 }
 
@@ -457,6 +473,7 @@ void resetGames() {
   resetThirtySeconds();
   resetQuiz();
   resetCopyGame();
+  copyGameStarted = false;
 }
 
 void cycleModes()
