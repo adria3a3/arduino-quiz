@@ -235,10 +235,8 @@ void checkUserSequence() {
   if (!sequenceError && i == sequenceLength) {
     levelCopyUp();
     repeat = false;
-  }
-
-  // repeat = false;
-  lastButtonPressed = -1;
+    lastButtonPressed = -1;
+  } 
 }
 
 void levelCopyUp() {
